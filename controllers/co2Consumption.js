@@ -61,8 +61,16 @@ exports.simulateFuturePurchaseOfCarbonOffset = (req, res) => {
         const covertedWeight =  countryIndex.map((element) => {
             return element.AvgCO2ConsumptionPerPersonPerYear * 1000;
             }) 
-            let numberValue = parseInt(covertedWeight)
-            const numberOfTreesNeedsToBuy = Math.round(numberValue/oneTreeOffsetValue)
+
+            const monthlyCarbonConsumption = countryIndex.map((el) => {
+                return (el.AvgCO2ConsumptionPerPersonPerYear / 12) * 1000 
+            })
+
+            //console.log(">>>>>>>>>>",monthlyCarbonConsumption)
+            let yearlyConsumptionNum = parseInt(covertedWeight);
+            let monthlyConsumptionNum = parseInt(monthlyCarbonConsumption)
+            console.log('>>',monthlyConsumptionNum)
+            const numberOfTreesNeedsToBuy = Math.round(yearlyConsumptionNum/oneTreeOffsetValue)
             //console.log(numberOfTreesNeedsToBuy)
             const annualCost = numberOfTreesNeedsToBuy * annualCostForTree
             const totalCost =  numberOfTreesNeedsToBuy * fixedUpFrontCost + annualCost
