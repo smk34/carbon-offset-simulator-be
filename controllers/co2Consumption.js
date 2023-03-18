@@ -56,21 +56,37 @@ exports.simulateFuturePurchaseOfCarbonOffset = (req, res) => {
     if(countryIndex === -1){
         res.status(400).send('Country Not Found');
     }else{
-        const percentage = calculatePercentage(fixedUpFrontCost, annualPercentageCostForTree)
+        const annualCostForTree = calculatePercentage(fixedUpFrontCost, annualPercentageCostForTree)
         //console.log('>>>>>>>>>>>>>>', percentage) 
         const covertedWeight =  countryIndex.map((element) => {
             return element.AvgCO2ConsumptionPerPersonPerYear * 1000;
-            })
+            }) 
             let numberValue = parseInt(covertedWeight)
             const numberOfTreesNeedsToBuy = Math.round(numberValue/oneTreeOffsetValue)
             //console.log(numberOfTreesNeedsToBuy)
-            if(numberOfTreesNeedsToBuy <= 55){
-                numberOfTreesNeedsToBuy * fixedUpFrontCost
-            }else{
-            console.log( 55 * fixedUpFrontCost)
-            }    
+            const annualCost = numberOfTreesNeedsToBuy * annualCostForTree
+            const totalCost =  numberOfTreesNeedsToBuy * fixedUpFrontCost + annualCost
+            //return totalCost;
+            res.json({
+                numberOfTreesNeedsToBuy,
+                totalCost
+            })
+            // if(numberOfTreesNeedsToBuy <= 55){
+            //   const totalCost =  numberOfTreesNeedsToBuy * fixedUpFrontCost + annualCost
+            //   return totalCost
+            // }else{
+            //     const totalCost = 55 * fixedUpFrontCost + annualCost
+            //     return totalCost
+            // }    
     }
 
+    // res.json({
+    //     numberOfTreesNeedsToBuy,
+    //     totalCost
+    // })
+
+
+    
     
 
     //oneTreeOffsetValue/weightInKgs --- 
