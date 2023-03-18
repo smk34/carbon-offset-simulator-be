@@ -52,8 +52,7 @@ exports.simulateFuturePurchaseOfCarbonOffset = (req, res) => {
     let { Country } = req.params;
 
     const countryIndex = consumptionData.filter(c =>c.Country === Country );
-
-    if(countryIndex === -1){
+    if(!countryIndex.length){
         res.status(400).send('Country Not Found');
     }else{
         const annualCostForTree = calculatePercentage(fixedUpFrontCost, annualPercentageCostForTree)
