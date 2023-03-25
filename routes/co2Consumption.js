@@ -1,9 +1,16 @@
-const express = require('express')
+const express = require('express');
+const carbonOffSetCalc = require('../controllers/co2Consumption');
 const router = express.Router();
-const { getConsumptionPerYearPer, simulateFuturePurchaseOfCarbonOffset, getAllCountries } = require('../controllers/co2Consumption');
 
-router.get('/co2consumptionperpersonperyear', getConsumptionPerYearPer);
-router.get('/simulatedFuturePurchases/:Country',simulateFuturePurchaseOfCarbonOffset);
-router.get('/getAllCountries',getAllCountries)
+router.post("/simulateTheStats", async (req, res) => {
+    try {
+      
+      const simulatedStats = await carbonOffSetCalc(req.body, req.body.config);
+  
+      res.send({ status: 1, simulatedStats });
+    } catch (error) {
+      res.send({ status: 0, error });
+    }
+  });
 
 module.exports = router;
