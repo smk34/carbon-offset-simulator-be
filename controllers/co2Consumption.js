@@ -35,8 +35,9 @@ const consumptionData = [
 
 let fixedUpFrontCost =  120;
 let oneTreeOffsetValueInYear = 28.5; // kg per year
-let oneTreeOffsetValueInMonth = oneTreeOffsetValueInYear / 12; // kg per year
+let oneTreeOffsetValueInMonth = (oneTreeOffsetValueInYear / 12); // kg per year
 let annualPercentageCostForTree = 10;
+let yearsToGrow = 5;
 
 const calculatePercentage = (number, percentage) => {
     return (number * percentage) / 100;
@@ -55,82 +56,97 @@ exports.getConsumptionPerYearPer = (req, res) => {
 
 exports.simulateFuturePurchaseOfCarbonOffset = (req, res) => {
     //purachsing a tree is a fixed cost up-front and ann cost of 10% of the inital cost/yr $120 and $12 per year from that next year
-
+    // console.log('>>>', req.body)
+    let { treePurchases } = req.body
     let { Country } = req.params;
+    console.log('>>>', treePurchases)
+    const startMonthIndexGen = (obj, startObj = treePurchases[0]) => {
+        console.log('Start Month Index Gen')
+        return(
+            12 - startObj.month + (obj.year - startObj.year) * 12 + obj.month
+        )
+    }
 
     const countryIndex = consumptionData.filter(c =>c.Country === Country );
     console.log("countryIndex>",countryIndex)
     if(!countryIndex.length){
         res.status(400).send({msg:"country not found",hint:"please provide country name in query params"});
     }else{
-      //  const annualCostForTree = calculatePercentage(fixedUpFrontCost, annualPercentageCostForTree)
-        //console.log('>>>>>>>>>>>>>>', percentage) 
-        // const covertedWeight =  countryIndex.map((element) => {
-        //     return element.AvgCO2ConsumptionPerPersonPerYear * 1000;
-        //     }) 
-         
-        //     const monthlyCarbonConsumption = countryIndex.map((el) => {
-        //         return (el.AvgCO2ConsumptionPerPersonPerYear / 12) * 1000 
-        //     })
-            let oneYearCost  = 55 * 120;
-            let AvgCO2ConsumptionPerPersonPerYearInkg =  countryIndex[0].AvgCO2ConsumptionPerPersonPerYear * 1000;
-            let AvgCO2ConsumptionPerPersonPerMonthInkg = AvgCO2ConsumptionPerPersonPerYearInkg / 12;
-            let yearlyConsumptionNum   = AvgCO2ConsumptionPerPersonPerYearInkg / oneTreeOffsetValueInYear;
+
+            //let graphData = [];
+            let monthsToGrow = (yearsToGrow) * 12;
+            let monthlyCostToMaintain = calculatePercentage(fixedUpFrontCost, annualPercentageCostForTree);
+            let oneYearCost  = (55 * 120);
+            let AvgCO2ConsumptionPerPersonPerYearInkg =  (countryIndex[0].AvgCO2ConsumptionPerPersonPerYear * 1000);
+            let AvgCO2ConsumptionPerPersonPerMonthInkg = (AvgCO2ConsumptionPerPersonPerYearInkg / 12);
+            let yearlyConsumptionNum   = (AvgCO2ConsumptionPerPersonPerYearInkg / oneTreeOffsetValueInYear);
+            let finalMonthIndex = startMonthIndexGen(treePurchases[treePurchases.length - 1]) + monthsToGrow;
             console.log("yearlyConsumptionNum need to  plant no of trees",yearlyConsumptionNum)
             let noOfyear = yearlyConsumptionNum / 55
             console.log("noOfyear",noOfyear)
             let cost  = noOfyear * 120
             console.log("cost",cost)
+            // Returned data obj.
+            let result = {
+                graphData: [], // { monthIndex: #, offset: #.###(kg), expenditure: #.##($ - NOT cents) }
+                stats: {
+                cost: { initialCost: 0, costPerAnnum: 0, totalCostPerAnnum: 0, totalExpense: 0 }, // #.##($ - NOT cents)
+                trees: 0,
+                },
+            };
+            let { graphData, stats } = result;
+            treePurchases.map((el) => {
+                //console.log("hiiiiiiiiiiii")
+                let startMonthIndex = startMonthIndexGen(el);
+                //console.log("...",startMonthIndex)
+                let trees = el.trees;
+                console.log('.....',trees);
+                for(let i = startMonthIndex; i <= finalMonthIndex; i++){
+                    if(startMonthIndex === 0){
+                        graphData[i] = {
+                            //data: indexToUTC(i).getTime(),
+                            offSet: 0,
+                            expenditure: 0
+                        }
+                    }
+                    // graphData[i].offSet = 
+                    // graphData[i].offSet + offsetCalc(trees, i, startMonthIndex);
+                    graphData[i].expenditure = 
+                    graphData[i].expenditure + costCalc(trees, i, startMonthIndex);
+                }
+                console.log('graph',graphData)
+                stats.trees +=trees;
+                stats.cost.initialCost += trees * fixedUpFrontCost;
+                stats.cost.totalCostPerAnnum += trees * (monthlyCostToMaintain * (finalMonthIndex - startMonthIndex))
+            })
+
+            stats.cost.costPerAnnum = stats.trees * monthlyCostToMaintain;
+            stats.cost.totalExpense = graphData[finalMonthIndex].expenditure;
+            stats.monthlyEmission = AvgCO2ConsumptionPerPersonPerMonthInkg
+            stats.totalYears = Math.round(finalMonthIndex / 12);
+            
+            const offsetCalc = (trees, i, startMonthIndex) => {
+                console.log('offset')
+                return (
+                  trees *
+                  //if tree is still growing
+                  (i < startMonthIndex + monthsToGrow
+                    ? //add fraction of max offset based on how many days its grown
+                      (i - startMonthIndex) * (oneTreeOffsetValueInMonth / monthsToGrow)
+                    : // else add max offset
+                    oneTreeOffsetValueInMonth)
+                );
+              }
+              const costCalc = (trees, i, startMonthIndex) =>{
+                return trees * (monthlyCostToMaintain * (i - startMonthIndex) + fixedUpFrontCost);
+              }
              res.json({
+                result,
                 "treesNeedsToBeBuy":yearlyConsumptionNum,
                 "totalNoOfYears":noOfyear,
                 "treeMaintananceCost":calculatePercentage(cost, 10),
                 totalCost:cost
             })
-            //console.log(">>>>>>>>>>",monthlyCarbonConsumption)
-            // let yearlyConsumptionNum = parseInt(covertedWeight);
-            // let monthlyConsumptionNum = parseInt(monthlyCarbonConsumption)
-        //    console.log('>>',monthlyConsumptionNum)
-       //     const numberOfTreesNeedsToBuy = Math.round(yearlyConsumptionNum/oneTreeOffsetValue)
-            //console.log(numberOfTreesNeedsToBuy)
-            // const annualCost = numberOfTreesNeedsToBuy * annualCostForTree
-            // const totalCost =  numberOfTreesNeedsToBuy * fixedUpFrontCost + annualCost
-            // //return totalCost;
-            // res.json({
-            //     numberOfTreesNeedsToBuy,
-            //     totalCost
-            // })
-            // if(numberOfTreesNeedsToBuy <= 55){
-            //   const totalCost =  numberOfTreesNeedsToBuy * fixedUpFrontCost + annualCost
-            //   return totalCost
-            // }else{
-            //     const totalCost = 55 * fixedUpFrontCost + annualCost
-            //     return totalCost
-            // }    
+           
     }
-
-    // res.json({
-    //     numberOfTreesNeedsToBuy,
-    //     totalCost
-    // })
-
-
-    
-    
-
-    //oneTreeOffsetValue/weightInKgs --- 
-
-    // const numberOfTreeNeedToBuy = convertToKgs.map((element) => {
-    //    const treeNumber = Math.round(element/oneTreeOffsetValue);
-    //    //console.log(treeNumber)
-    //    return treeNumber
-    // })
-
-    // const treePurchasingCostPerYear = 55 * fixedUpFrontCost + initalCostPerYear 
-    // console.log(treePurchasingCostPerYear);
 }
-
-
-// exports.getSimulatedData = (req, res) => {
-
-// }
